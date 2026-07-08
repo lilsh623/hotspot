@@ -1,0 +1,56 @@
+name: 每日 AI 热点日报
+
+on:
+  schedule:
+    # UTC 01:30 = 北京时间 09:30（GitHub 高峰期可能延迟几分钟到十几分钟）
+    - cron: '30 1 * * *'
+  workflow_dispatch: {}   # 支持在 Actions 页面手动触发测试
+
+permissions:
+  contents: write   # 用于把更新后的 state/seen.json 提交回仓库
+
+concurrency:
+  group: daily-digest
+  cancel-in-progress: false
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+
+      - name: 安装 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: 安装依赖
+        run: pip install -r requirements.txt
+
+      - name: 运行日报
+        env:
+          DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
+          QWEN_MODEL: ${{ vars.QWEN_MODEL }}
+          ITEMS_PER_SOURCE: ${{ vars.ITEMS_PER_SOURCE }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          MAIL_FROM: ${{ secrets.MAIL_FROM }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+        run: python main.py
+
+      - name: 提交状态变更
+        if: success()
+        run: |
+          if [[ -n "$(git status --porcelain state/seen.json)" ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add state/seen.json
+            git commit -m "chore: 更新已推送记录 [skip ci]"
+            git push
+          else
+            echo "seen.json 无变更，跳过提交。"
+          fi

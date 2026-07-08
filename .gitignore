@@ -1,0 +1,16 @@
+# IDE
+.idea/
+
+# Claude
+.claude/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# 环境变量与密钥
+.env

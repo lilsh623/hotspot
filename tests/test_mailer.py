@@ -41,8 +41,23 @@ class FakeSMTP:
     def login(self, user, password):
         self.logged_in = (user, password)
 
-    def send_message(self, msg):
+    def send_message(self, msg, to_addrs=None):
         self.sent = msg
+        self.to_addrs = to_addrs
+
+
+def test_parse_recipients_single():
+    assert mailer.parse_recipients("a@x.com") == ["a@x.com"]
+
+
+def test_parse_recipients_multiple_with_spaces():
+    assert mailer.parse_recipients("a@x.com, b@y.com ,c@z.com") == [
+        "a@x.com", "b@y.com", "c@z.com",
+    ]
+
+
+def test_parse_recipients_ignores_empty_segments():
+    assert mailer.parse_recipients("a@x.com,,b@y.com,") == ["a@x.com", "b@y.com"]
 
 
 def test_send_logs_in_and_sends(monkeypatch):
@@ -65,9 +80,27 @@ def test_send_logs_in_and_sends(monkeypatch):
     assert smtp.sent["To"] == "to@y.com"
 
 
+def test_send_to_multiple_recipients(monkeypatch):
+    FakeSMTP.instances = []
+    monkeypatch.setattr(mailer.smtplib, "SMTP_SSL", FakeSMTP)
+
+    mailer.send(
+        subject="s", html="<body>h</body>", text="t",
+        host="smtp.x.com", port=465,
+        user="u@x.com", password="secret",
+        mail_from="u@x.com", mail_to="a@x.com, b@y.com,c@z.com",
+    )
+
+    smtp = FakeSMTP.instances[0]
+    # To 头显示全部收件人
+    assert smtp.sent["To"] == "a@x.com, b@y.com, c@z.com"
+    # 实际投递地址是拆分后的列表，确保每个人都收到
+    assert smtp.to_addrs == ["a@x.com", "b@y.com", "c@z.com"]
+
+
 def test_send_propagates_smtp_error(monkeypatch):
     class BoomSMTP(FakeSMTP):
-        def send_message(self, msg):
+        def send_message(self, msg, to_addrs=None):
             raise RuntimeError("smtp refused")
 
     monkeypatch.setattr(mailer.smtplib, "SMTP_SSL", BoomSMTP)

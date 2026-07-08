@@ -38,6 +38,18 @@ def test_env_overrides(monkeypatch):
     assert cfg.RSS_FEEDS == ["https://a.com/feed", "https://b.com/feed"]
 
 
+def test_empty_numeric_env_falls_back_to_default(monkeypatch):
+    # GitHub Actions vars 若创建但留空，会注入空字符串，不能让 int('') 崩溃
+    cfg = reload_config(monkeypatch, ITEMS_PER_SOURCE="", SMTP_PORT="")
+    assert cfg.ITEMS_PER_SOURCE == 10
+    assert cfg.SMTP_PORT == 465
+
+
+def test_invalid_numeric_env_falls_back_to_default(monkeypatch):
+    cfg = reload_config(monkeypatch, ITEMS_PER_SOURCE="abc")
+    assert cfg.ITEMS_PER_SOURCE == 10
+
+
 def test_require_returns_value_when_set(monkeypatch):
     cfg = reload_config(monkeypatch, DASHSCOPE_API_KEY="sk-123")
     assert cfg.require("DASHSCOPE_API_KEY") == "sk-123"

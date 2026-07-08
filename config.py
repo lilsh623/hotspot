@@ -21,11 +21,24 @@ def _split(value: str) -> list[str]:
     return [part.strip() for part in value.split(",") if part.strip()]
 
 
-QWEN_MODEL = os.getenv("QWEN_MODEL", "qwen-plus")
-ITEMS_PER_SOURCE = int(os.getenv("ITEMS_PER_SOURCE", "10"))
+def _int_env(name: str, default: int) -> int:
+    """读取整数环境变量；未设置、为空或非法时回退默认值。
+
+    GitHub Actions 的 vars 若创建但留空会注入空字符串，int('') 会崩溃，
+    因此空值和非法值都按“未设置”处理。
+    """
+    raw = os.getenv(name, "")
+    try:
+        return int(raw)
+    except ValueError:
+        return default
+
+
+QWEN_MODEL = os.getenv("QWEN_MODEL") or "qwen-plus"
+ITEMS_PER_SOURCE = _int_env("ITEMS_PER_SOURCE", 10)
 
 SMTP_HOST = os.getenv("SMTP_HOST", "")
-SMTP_PORT = int(os.getenv("SMTP_PORT", "465"))
+SMTP_PORT = _int_env("SMTP_PORT", 465)
 SMTP_USER = os.getenv("SMTP_USER", "")
 SMTP_PASS = os.getenv("SMTP_PASS", "")
 MAIL_FROM = os.getenv("MAIL_FROM", "")

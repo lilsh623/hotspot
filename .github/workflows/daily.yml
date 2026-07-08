@@ -1,4 +1,4 @@
-name: 每日 AI 热点日报
+name: Daily AI Hotspot Digest
 
 on:
   schedule:

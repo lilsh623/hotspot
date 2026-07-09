@@ -2,8 +2,12 @@ name: Daily AI Hotspot Digest
 
 on:
   schedule:
-    # UTC 01:30 = 北京时间 09:30（GitHub 高峰期可能延迟几分钟到十几分钟）
-    - cron: '30 1 * * *'
+    # 避开整点/半点高峰(GitHub cron 高峰期会延迟甚至跳过)，用错峰怪分钟
+    # 主：UTC 01:07 = 北京 09:07
+    - cron: '7 1 * * *'
+    # 备用：UTC 01:37 = 北京 09:37。主时间若被跳过则补跑；
+    # seen.json 去重保证已推送内容不会重发，同一天两次不会收到两封
+    - cron: '37 1 * * *'
   workflow_dispatch: {}   # 支持在 Actions 页面手动触发测试
 
 permissions:
